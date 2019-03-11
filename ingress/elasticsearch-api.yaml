@@ -1,0 +1,9 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  namespace: elk
+  name: elasticsearch-api
+spec:
+  backend:
+    serviceName: elasticsearch-api
+    servicePort: 9200

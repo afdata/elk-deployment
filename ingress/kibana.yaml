@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  namespace: elk
+  name: kibana
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.frontend.rule.type: PathPrefixStrip
+spec:
+  rules:
+  - host: kibana.test.local # choose the domain name for kibana web interface
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: kibana-loadbalancer
+          servicePort: 5601

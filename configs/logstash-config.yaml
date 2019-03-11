@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: elk
+  name: logstash-indexer
+  labels:
+    app: logstash
+data:
+  indexer.conf: |
+    input {
+      redis {
+        host => "redis-indexer"
+        key => "logstash"
+        data_type => "list"
+        codec => json
+      }
+    }
+    filter {
+      mutate {
+        gsub => ['message', "\n", " "]
+      }
+      grok {
+        match => {
+          "message" => ["%{SYSLOGPAMSESSION}", "%{CRONLOG}", "%{SYSLOGLINE}"]
+        }
+        overwrite => "message"
+      }
+      grok {
+        match => [ "message", "%{TIMESTAMP_ISO8601:date}\s+\|\s+%{WORD:level}\s+\[%{DATA:jmsId}\/%{DATA:axId}\]\s+\[%{DATA:thread}\]\s+\[%{WORD:class}\]\s+%{GREEDYDATA:msg}" ]
+      }
+      grok {
+        match => [ "message", "SYSLOGBASE" ]
+      }
+      date {
+        remove_field => [ "date" ]
+        match => [ "date", "YYYY-MM-dd HH:mm:ss,SSS" ]
+      }
+      date {
+        match => ["timestamp", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss"]
+        remove_field => ["timestamp"]
+      }
+    }
+    output {
+      elasticsearch {
+        hosts => ["elasticsearch:9200"]
+        index => "syslogs"
+      }
+    }

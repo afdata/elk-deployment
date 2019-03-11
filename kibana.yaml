@@ -1,0 +1,55 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-loadbalancer
+  namespace: elk
+  labels:
+    app: kibana
+spec:
+  type: LoadBalancer
+  selector:
+    app: kibana
+  ports:
+  - name: http
+    port: 5601
+    targetPort: 5601
+    protocol: TCP
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: elk
+  labels:
+    app: kibana
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+     app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana-oss:6.6.0
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://elasticsearch:9200"
+        - name: ELASTICSEARCH_USERNAME
+          value: kibana
+        - name: ELASTICSEARCH_PASSWORD
+          value: kibana
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1G #For production can be increased.
+          requests:
+            cpu: 100m
+        ports:
+        - containerPort: 80
+          name: kibana
+          protocol: TCP

@@ -1,0 +1,9 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  namespace: elk
+  name: redis-indexer
+spec:
+  backend:
+    serviceName: redis-indexer
+    servicePort: 6379

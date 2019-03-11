@@ -1,0 +1,131 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    component: elasticsearch
+  namespace: elk
+  name: elasticsearch
+spec:
+  selector:
+    component: elasticsearch
+  ports:
+  - name: http
+    port: 9200
+    targetPort: 9200
+  type: LoadBalancer
+  externalIPs:
+  - 1.2.3.4  #The external IP address to allow connections for ES from outside
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    component: elasticsearch
+  namespace: elk
+  name: elasticsearch-cluster
+spec:
+  clusterIP: None
+  selector:
+    component: elasticsearch
+  ports:
+  - name: transport
+    port: 9300
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+
+metadata:
+  labels:
+    app: elasticsearch
+    tier: elasticsearch-cluster
+  namespace: elk
+  name: es-node
+spec:
+  serviceName: elasticsearch
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        component: elasticsearch
+    spec:
+      securityContext:
+        fsGroup: 1000
+
+## As the initContainers needs to have privileges,
+## we have to start the command on host system
+#      initContainers:
+#      - name: init-sysctl
+#        image: busybox
+#        imagePullPolicy: IfNotPresent
+#        securityContext:
+#          privileged: true
+#        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+      containers:
+      - name: elasticsearch
+        resources:
+            requests:
+                memory: 1Gi #For production has to be increased
+        securityContext:
+          privileged: false
+          runAsUser: 1000   #NFS folder has to have as an owner the user with uid=1000
+          capabilities:
+            add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+        image: docker.elastic.co/elasticsearch/elasticsearch:6.6.0
+        env:
+        - name: ES_JAVA_OPTS
+          valueFrom:
+              configMapKeyRef:
+                  name: es-config
+                  key: ES_JAVA_OPTS
+        ports:
+        - containerPort: 9200
+          name: es-http
+        - containerPort: 9300
+          name: es-transport
+        volumeMounts:
+        - name: es-data
+          mountPath: /usr/share/elasticsearch/data
+        - name: es-config
+          mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          subPath: elasticsearch.yml
+        - name: role-mapping
+          mountPath: /usr/share/elasticsearch/config/role_mapping.yml
+          subPath: role_mapping.yml
+        - name: users
+          mountPath: /usr/share/elasticsearch/config/users
+          subPath: users
+        - name: users-roles
+          mountPath: /usr/share/elasticsearch/config/users_roles
+          subPath: users_roles
+      volumes:
+        - name: es-config
+          configMap:
+            name: es-config
+            items:
+              - key: elasticsearch.yml
+                path: elasticsearch.yml
+        - name: role-mapping
+          configMap:
+            name: role-mapping
+            items:
+              - key: role_mapping.yml
+                path: role_mapping.yml
+        - name: users
+          configMap:
+            name: users
+            items:
+              - key: users
+                path: users
+        - name: users-roles
+          configMap:
+            name: users-roles
+            items:
+              - key: users_roles
+                path: users_roles
+        - name: es-data
+          nfs:
+            server: 1.2.3.5  #NFS share IP address to store ES database
+            path: "/srv/nfsshare/k8s-stage/elasticsearch"

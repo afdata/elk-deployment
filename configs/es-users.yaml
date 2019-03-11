@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: elk
+  name: users
+  labels:
+    app: elasticsearch
+data:
+  users: kibana:$2y$04$cc4QVMqZBBV67C7ocAMzTuz/CMLLLNhQlYmSVRFFn1FvQe37qNtzG # kibana:kibana
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: elk
+  name: users-roles
+  labels:
+    app: elasticsearch
+data:
+  users_roles: |
+    kibana:admin

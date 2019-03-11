@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  namespace: elk
+  name: logstash-api
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.frontend.rule.type: PathPrefixStrip
+spec:
+  rules:
+  - host: logstash.test.local # choose the domain name for logstash API interface
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: logstash-api
+          servicePort: 9600

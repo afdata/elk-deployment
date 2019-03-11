@@ -1,0 +1,32 @@
+## The yaml deploys curator CronJob which starting Jobs by avi_scheduler
+## In API batch/v2alpha1 impossible to cleanup old Jobs in automated way.
+
+## After v1.8 has to be apiVersion: batch/v1beta1
+apiVersion: batch/v2alpha1
+kind: CronJob
+metadata:
+  name: curator
+  namespace: elk
+spec:
+  schedule: 0 1 * * *
+  jobTemplate:
+    spec:
+      #ttlSecondsAfterFinished: 100 #Will work with v1.12
+      template:
+        spec:
+          containers:
+          - name: curator
+            image: bobrik/curator:5.6.0
+            args:
+            - --config
+            - /etc/config/config.yml
+            - /etc/config/action_file.yml
+            volumeMounts:
+              - name: config-volume
+                mountPath: /etc/config
+          volumes:
+            - name: config-volume
+              configMap:
+                name: curator-config
+          restartPolicy: OnFailure
+      #backoffLimit: 4 # Will work after v1.8
